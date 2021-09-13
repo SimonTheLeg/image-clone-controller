@@ -22,7 +22,7 @@ func TestDeploymentController(t *testing.T) {
 		expImgs     []string
 		expInitImgs []string
 	}{
-		"image to patch, no initContainer": {
+		"should update": {
 			name:        "test",
 			namespace:   "test",
 			imgs:        []string{"simontheleg/debug-pod:latest"},
@@ -31,7 +31,7 @@ func TestDeploymentController(t *testing.T) {
 			expImgs:     []string{"index.docker.io/test/simontheleg_debug-pod:latest"},
 			expInitImgs: []string{},
 		},
-		"nothing to patch": {
+		"nothing to update": {
 			name:        "test",
 			namespace:   "test",
 			imgs:        []string{"index.docker.io/test/simontheleg_debug-pod:latest"},
@@ -39,15 +39,6 @@ func TestDeploymentController(t *testing.T) {
 			buReg:       "test",
 			expImgs:     []string{"index.docker.io/test/simontheleg_debug-pod:latest"},
 			expInitImgs: []string{"index.docker.io/test/istio_proxy_init:1.0.2"},
-		},
-		"mix of containers and init containers": {
-			name:        "test",
-			namespace:   "test",
-			imgs:        []string{"simontheleg/debug-pod:latest", "index.docker.io/test/library_nginx:latest"},
-			initImgs:    []string{"index.docker.io/test/istio_proxy_init:1.0.2", "quay.io/prometheus/node-exporter:v1.2.2"},
-			buReg:       "test",
-			expImgs:     []string{"index.docker.io/test/simontheleg_debug-pod:latest", "index.docker.io/test/library_nginx:latest"},
-			expInitImgs: []string{"index.docker.io/test/istio_proxy_init:1.0.2", "index.docker.io/test/prometheus_node-exporter:v1.2.2"},
 		},
 	}
 
@@ -58,9 +49,11 @@ func TestDeploymentController(t *testing.T) {
 			c := fake.NewClientBuilder().WithRuntimeObjects(dep).Build()
 
 			rec := &DeploymentReconciler{
-				cl:          c,
-				RegClient:   &mockImgExistsReg{},
-				BuRegRemote: tc.buReg,
+				cl: c,
+				GenericReconciler: GenericReconciler{
+					RegClient:   &mockImgExistsReg{},
+					BuRegRemote: tc.buReg,
+				},
 			}
 
 			req := reconcile.Request{
@@ -75,10 +68,12 @@ func TestDeploymentController(t *testing.T) {
 				t.Error("reconciliation was requeued when it should not")
 			}
 			if err != nil {
-				t.Errorf("Error: exp nil, got '%s", err)
+				t.Errorf("Error: exp nil, got '%s'", err)
 			}
 
 			gotDep := &appsv1.Deployment{}
+			// we can infer if the newly get image matches our expecation, the reconciler has
+			// correctly decided whether to update or not
 			err = rec.cl.Get(context.Background(), req.NamespacedName, gotDep)
 			if err != nil {
 				t.Fatalf("could not get deployment: '%v'", err)

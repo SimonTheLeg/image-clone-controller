@@ -72,10 +72,12 @@ func main() {
 	}
 
 	dRec := controller.DeploymentReconciler{
-		Igns:        conf.ignNs,
-		RegClient:   &registry.RegistryBackUp{},
-		BuRegRemote: conf.buRegRemote,
-		DAuth:       dAuth,
+		GenericReconciler: controller.GenericReconciler{
+			Igns:        conf.ignNs,
+			RegClient:   &registry.RegistryBackUp{},
+			BuRegRemote: conf.buRegRemote,
+			DAuth:       dAuth,
+		},
 	}
 	err = dRec.SetupWithManager(mgr)
 	if err != nil {

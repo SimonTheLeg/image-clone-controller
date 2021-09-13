@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/simontheleg/image-clone-controller/registry"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -43,4 +44,44 @@ func (b *BackUPer) ensureBackup(ctx context.Context, image string, newReg string
 
 	log.Info("Successfully finished backup", "image", buRef.Context().RepositoryStr(), "remote", buRef.Context().RegistryStr())
 	return buRef.Name(), nil
+}
+
+type GenericReconciler struct {
+	Igns        []string
+	RegClient   registry.BackUp
+	DAuth       authn.Authenticator
+	BuRegRemote string
+}
+
+// patchPodSpecAndImage ensures that images are backed up and returns a patched PodTemplateSpec.
+// It will leave the old object intact and return a pointer to a patched copy
+func (r *GenericReconciler) patchPodSpecAndImage(ctx context.Context, old corev1.PodTemplateSpec) (patchReq bool, upd *corev1.PodTemplateSpec, err error) {
+	bu := BackUPer{
+		Reg:   r.RegClient,
+		DAuth: r.DAuth,
+	}
+
+	upd = &old
+	for p, cont := range old.Spec.InitContainers {
+		ref, err := bu.ensureBackup(ctx, cont.Image, r.BuRegRemote)
+		if old.Spec.InitContainers[p].Image != ref {
+			patchReq = true
+			upd.Spec.InitContainers[p].Image = ref
+		}
+		if err != nil {
+			return false, nil, err
+		}
+	}
+
+	for p, cont := range old.Spec.Containers {
+		ref, err := bu.ensureBackup(ctx, cont.Image, r.BuRegRemote)
+		if old.Spec.Containers[p].Image != ref {
+			patchReq = true
+			upd.Spec.Containers[p].Image = ref
+		}
+		if err != nil {
+			return false, nil, err
+		}
+	}
+	return patchReq, upd, nil
 }
