@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: envoy
+spec:
+  selector:
+    matchLabels:
+      name: envoy
+  template:
+    metadata:
+      labels:
+        name: envoy
+    spec:
+      containers:
+        - name: envoy
+          image: envoyproxy/envoy:v1.18.4
+          resources:
+            limits:
+              cpu: 200m
+              memory: 100Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
