@@ -71,15 +71,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	gRec := controller.GenericReconciler{
+		Igns:        conf.ignNs,
+		RegClient:   &registry.RegistryBackUp{},
+		BuRegRemote: conf.buRegRemote,
+		DAuth:       dAuth,
+	}
+
 	dRec := controller.DeploymentReconciler{
-		GenericReconciler: controller.GenericReconciler{
-			Igns:        conf.ignNs,
-			RegClient:   &registry.RegistryBackUp{},
-			BuRegRemote: conf.buRegRemote,
-			DAuth:       dAuth,
-		},
+		GenericReconciler: gRec,
 	}
 	err = dRec.SetupWithManager(mgr)
+	if err != nil {
+		log.Error(err, "could not create Deployments controller")
+	}
+
+	dsRec := controller.DaemonSetReconciler{
+		GenericReconciler: gRec,
+	}
+	err = dsRec.SetupWithManager(mgr)
 	if err != nil {
 		log.Error(err, "could not create Deployments controller")
 	}
