@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: image-clone-controller
+  name: image-clone-controller
+  namespace: image-clone-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: image-clone-controller
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: image-clone-controller
+    spec:
+      serviceAccountName: image-clone-controller
+      containers:
+        - image: imageclonebackupregistry/image-clone-controller:v1.0.0
+          name: icc
+          volumeMounts:
+            - mountPath: "/docker"
+              name: docker-conf
+              readOnly: true
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: "256Mi"
+      volumes:
+        - name: docker-conf
+          secret:
+            secretName: image-clone-controller

@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: image-clone-controller
+  namespace: image-clone-controller
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: image-clone-controller
+rules:
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - daemonsets
+    verbs:
+      - get
+      - list
+      - update
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: image-clone-controller
+subjects:
+  - kind: ServiceAccount
+    name: image-clone-controller
+    namespace: image-clone-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: image-clone-controller
